@@ -3,100 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-    <title>冬日圣诞树 AR 下雪特效</title>
+    <title>圣诞树 下雪特效</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; }
-        #tip { position: absolute; top: 20px; left: 0; right: 0; text-align: center; color: #fff; font-size: 18px; background: rgba(0,0,0,0.5); padding: 10px; z-index: 10; }
-        #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 999; color: #0ff; }
-        .spinner { width: 50px; height: 50px; border: 4px solid #333; border-top: 4px solid #0ff; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        #tip { position: absolute; top: 20px; left: 0; right: 0; text-align: center; color: #fff; font-size: 18px; background: rgba(0,0,0,0.6); padding: 12px; z-index: 10; }
+        #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 999; color: #0ff; font-size: 24px; }
+        .spinner { width: 60px; height: 60px; border: 5px solid #333; border-top: 5px solid #0ff; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        #error { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; color: red; display: none; justify-content: center; align-items: center; z-index: 999; font-size: 20px; text-align: center; padding: 20px; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
     <div id="loader"><div class="spinner"></div><div>加载圣诞树与雪花...</div></div>
-    <div id="tip">对准地面放置圣诞树，雪花会飘落哦~ 圣诞快乐！🎄❄️</div>
+    <div id="error"></div>
+    <div id="tip">圣诞快乐！树在缓慢旋转，雪花飘落中～🎄❄️</div>
 
     <script type="module">
-        // 简单粒子雪花
-        class SnowParticles {
-            constructor(scene) {
-                this.count = 3000;
-                const geo = new THREE.BufferGeometry();
-                const pos = new Float32Array(this.count * 3);
-                const vel = new Float32Array(this.count);
-                for(let i = 0; i < this.count; i++) {
-                    pos[i*3] = (Math.random() - 0.5) * 20;
-                    pos[i*3+1] = Math.random() * 15;
-                    pos[i*3+2] = (Math.random() - 0.5) * 20;
-                    vel[i] = 0.02 + Math.random() * 0.03;
+        try {
+            // 下雪粒子
+            class SnowParticles {
+                constructor(scene) {
+                    this.count = 10000;
+                    const geo = new THREE.BufferGeometry();
+                    const pos = new Float32Array(this.count * 3);
+                    for(let i = 0; i < this.count; i++) {
+                        pos[i*3]   = (Math.random() - 0.5) * 60;
+                        pos[i*3+1] = Math.random() * 40 + 10;
+                        pos[i*3+2] = (Math.random() - 0.5) * 60;
+                    }
+                    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+                    const mat = new THREE.PointsMaterial({color: 0xffffff, size: 0.25, transparent: true, opacity: 0.9});
+                    this.points = new THREE.Points(geo, mat);
+                    this.positions = pos;
+                    scene.add(this.points);
                 }
-                geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-                const mat = new THREE.PointsMaterial({color: 0xffffff, size: 0.1, transparent: true, opacity: 0.8});
-                this.points = new THREE.Points(geo, mat);
-                this.positions = pos;
-                this.velocities = vel;
-                scene.add(this.points);
-            }
-            update() {
-                const pos = this.positions;
-                for(let i = 0; i < this.count; i++) {
-                    pos[i*3+1] -= this.velocities[i];
-                    if(pos[i*3+1] < 0) pos[i*3+1] = 15;
+                update() {
+                    const pos = this.positions;
+                    for(let i = 0; i < this.count; i++) {
+                        pos[i*3+1] -= 0.08;
+                        if(pos[i*3+1] < -10) {
+                            pos[i*3+1] = 40;
+                            pos[i*3] = (Math.random() - 0.5) * 60;
+                            pos[i*3+2] = (Math.random() - 0.5) * 60;
+                        }
+                    }
+                    this.points.geometry.attributes.position.needsUpdate = true;
                 }
-                this.points.geometry.attributes.position.needsUpdate = true;
             }
-        }
 
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x000011);
-        const camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.1, 1000);
-        camera.position.set(0, 1.5, 3);
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000822);
+            const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 1000);
+            camera.position.set(0, 5, 15);
 
-        const renderer = new THREE.WebGLRenderer({antialias: true});
-        renderer.setSize(innerWidth, innerHeight);
-        renderer.setPixelRatio(devicePixelRatio);
-        document.body.appendChild(renderer.domElement);
-
-        // 灯光
-        const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-        scene.add(ambient);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-        dirLight.position.set(5, 10, 7);
-        scene.add(dirLight);
-
-        // 这里用一个经典免费圣诞树GLB（从Sketchfab）
-        const loader = new THREE.GLTFLoader();
-        loader.load('https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF/Duck.gltf', () => {}, undefined, () => {
-            // 备用：如果加载失败，用简单几何体模拟树
-            const tree = new THREE.ConeGeometry(1, 3, 8);
-            const mat = new THREE.MeshBasicMaterial({color: 0x0f6});
-            const mesh = new THREE.Mesh(tree, mat);
-            mesh.position.y = 1.5;
-            scene.add(mesh);
-        });  // 实际替换成圣诞树URL，下面有推荐
-
-        const snow = new SnowParticles(scene);
-
-        function animate() {
-            requestAnimationFrame(animate);
-            snow.update();
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        // 简单触摸/鼠标放置（真实AR需HIT测试，这里简化）
-        document.body.addEventListener('click', () => {
-            // 可以添加放置逻辑
-        });
-
-        addEventListener('resize', () => {
-            camera.aspect = innerWidth/innerHeight;
-            camera.updateProjectionMatrix();
+            const renderer = new THREE.WebGLRenderer({antialias: true});
             renderer.setSize(innerWidth, innerHeight);
-        });
+            renderer.setPixelRatio(devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
 
-        document.getElementById('loader').remove();
+            // 灯光
+            const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambient);
+            const light = new THREE.PointLight(0xffddaa, 3, 100);
+            light.position.set(0, 15, 0);
+            scene.add(light);
+
+            // 手工圣诞树（更漂亮）
+            const treeGroup = new THREE.Group();
+            // 树干
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1, 4, 8), new THREE.MeshBasicMaterial({color: 0x8B4513}));
+            trunk.position.y = 2;
+            treeGroup.add(trunk);
+            // 树叶
+            for(let i = 0; i < 6; i++) {
+                const cone = new THREE.Mesh(new THREE.ConeGeometry(3 - i*0.5, 2.5, 16), new THREE.MeshBasicMaterial({color: 0x008800}));
+                cone.position.y = 4 + i*2;
+                treeGroup.add(cone);
+            }
+            // 星星
+            const star = new THREE.Mesh(new THREE.OctahedronGeometry(1), new THREE.MeshBasicMaterial({color: 0xffff00}));
+            star.position.y = 14;
+            treeGroup.add(star);
+            // 彩灯
+            const lights = new THREE.Points(
+                new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(300*3), 3)),
+                new THREE.PointsMaterial({size: 0.4, vertexColors: true, blending: THREE.AdditiveBlending})
+            );
+            // 随机彩灯位置（简化）
+            treeGroup.add(lights);
+
+            scene.add(treeGroup);
+
+            const snow = new SnowParticles(scene);
+
+            function animate() {
+                requestAnimationFrame(animate);
+                treeGroup.rotation.y += 0.005; // 明显旋转
+                snow.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = innerWidth/innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(innerWidth, innerHeight);
+            });
+
+            // 强制隐藏加载
+            document.getElementById('loader').style.display = 'none';
+        } catch (e) {
+            document.getElementById('error').style.display = 'flex';
+            document.getElementById('error').innerText = '加载出错: ' + e.message + '\n请刷新页面或换浏览器试试';
+        }
     </script>
 </body>
 </html>
